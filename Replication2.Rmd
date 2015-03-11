@@ -1,0 +1,133 @@
+---
+title: "Replication2"
+author: "Grace Tien"
+date: "March 6, 2015"
+output: html_document
+---
+
+```{r}
+# We are working w
+ith the GSS cumulative data. We downloaded the Stata file from:    Because we are using a Stata file, we have to install the foreign package in order to read it. 
+
+library(foreign)
+library(dplyr)
+library(ggplot2)
+library(broom)
+GSS.df <- read.dta("GSS7212_R6.DTA", convert.factors = FALSE, convert.underscore=TRUE)
+head(GSS.df)
+
+# In the last line of code above, we inserted the convert.underscore = TRUE because R Stata uses underscores in variable names, but R does not. 
+
+GSS.df <- tbl_df(GSS.df)
+GSS.df[1:100, ]
+
+
+# We are interested in the variables of age, cohort, religious affiliation, religion of origin, and total number of children born to the women in the sample, so we filter for those variables. The authors are looking at birth cohorts from 1903 to 1973 and women aged 25-74, so we filer based on cohort and age as well. We arrange the data in descending order of cohort to ease viewing of the data. Variables: relig = religious preference (various religious identities), religid = Protestant religious identity (i.e. Mainline, Evangelical, etc.), religkid = religion you were raised in, childs = total number of children ever had. 
+
+
+GSS.df %>%
+  select(age, cohort, relig, religid, childs, religkid) %>%
+  arrange(desc(cohort)) %>%
+  filter(year <= 1998, cohort >= 1903, cohort <= 1973, age >= 25, age <= 74, !is.na(relig), !is.na(religid))
+
+
+#The original paper uses STATA, and this replication project uses R, so some of the packages we install will substitute some of the STATA methods used in this original paper. 
+
+write.table(read.dta("GSS7212_R6.DTA", convert.factors = FALSE, convert.underscore=TRUE))
+head(write.table(GSS.df))
+
+
+```
+
+
+Model 1: The Full Model (p. 43)
+
+
+```
+
+Table 1: Denominational Switching by Type of Origin Denomination
+
+```{r}
+
+GSS.out$adult.mainline <- ifelse(GSS.out$denom == 22 | GSS.out$denom == 23 | GSS.out$denom == 28 | GSS.out$denom == 30 | GSS.out$denom == 31 | GSS.out$denom == 32 | GSS.out$denom == 40 | GSS.out$denom == 41 | GSS.out$denom == 50, 1, 0)
+#when adult.mainline = 1, the person is mainline, when adult.mainline = 0, the person is conservative
+
+select(GSS.out, cohort, adult.mainline)
+
+GSS.out$kid.mainline <- ifelse(GSS.out$denom16 == 22 | GSS.out$denom16 == 23 | GSS.out$denom == 28 | GSS.out$denom == 30 | GSS.out$denom16 == 31 | GSS.out$denom16 == 32 | GSS.out$denom16 == 40 | GSS.out$denom16 == 41 | GSS.out$denom16 == 50, 1, 0)
+#when kid.mainline = 1, the kid was raised mainline, when kid.mainline = 0, the person was raised conservative. 
+
+GSS.out$adult.other <- ifelse(GSS.out$relig == 2 | GSS.out$relig == 3 | GSS.out$relig == 5 | GSS.out$relig == 6 | GSS.out$relig == 7 | GSS.out$relig == 8 | GSS.out$relig == 9 | GSS.out$relig == 10 | GSS.out$relig == 12, 1, 0)
+#Drawing on the relig variable, we assume that other religion refers to all categories except Protestant, None, Christian, Don't Know (DK), and Not Applicable (NA). 
+
+GSS.out$adult.none <- ifelse(GSS.out$relig == 4, 1, 0)
+#Drawing on the relig variable, we assume that by "no religion" they are referring to the "None" category. 
+
+#For column 1 of the top half (Same as Origin, Mainline)
+GSS.out <- mutate(GSS.out, p.m.same = sum(ifelse(adult.mainline==1,1,0))/sum(ifelse(kid.mainline==1,1,0)))
+
+#For column 2 of the top half (Other Protestant, Mainline):
+GSS.out <- mutate(GSS.out, p.m.otherprot = sum(ifelse(adult.mainline==0,1,0))/sum(ifelse(kid.mainline==1,1,0)))
+
+#For column 3 of the top half (Other Religion, Mainline):
+GSS.out <- mutate(GSS.out, p.m.otherrel = sum(ifelse(adult.other==1,1,0))/sum(ifelse(kid.mainline==1,1,0)))
+
+#For column 4 of the top half (No Religion, Mainline):
+GSS.out <- mutate(GSS.out, p.m.none = sum(ifelse(adult.none==1,1,0))/sum(ifelse(kid.mainline==1,1,0)))
+
+#For column 1 of the bottom half (Same as Origin, Conservative):
+GSS.out <- mutate(GSS.out, p.c.same = sum(ifelse(adult.mainline==0,1,0))/sum(ifelse(kid.mainline==0,1,0)))
+
+#For column 2 of the bottom half (Other Protestant, Conservative):
+GSS.out <- mutate(GSS.out, p.c.otherprot = sum(ifelse(adult.mainline==1,1,0))/sum(ifelse(kid.mainline==0,1,0)))
+
+#For column 3 of the bottom half (Other Religion, Conservative):
+GSS.out <- mutate(GSS.out, p.c.otherrel = sum(ifelse(adult.other==1,1,0))/sum(ifelse(kid.mainline==0,1,0)))
+
+#For column 4 of the bottom half (No Religion, Conservative):
+GSS.out <- mutate(GSS.out, p.c.none = sum(ifelse(adult.none==1,1,0))/sum(ifelse(kid.mainline==0,1,0)))
+
+tbl_df(GSS.out) %>%
+  select(cohort, p.m.same, p.m.otherprot, p.m.otherrel, p.m.none)
+
+  
+```
+
+```{r}
+#Mainline Trend: mainline percentages with varying bandwith for smoothing in loess regression analysis
+mtrend.df <- read.dta("maintrend.dta", convert.factors = FALSE)
+head(trend.df)
+#bw: bandwith, loess regression to smooth
+
+mcohort.df <- read.dta("maincohort.dta", convert.factors = F)
+head(mcohort.df)
+
+moblow.df <- read.dta("moblow.dta", convert.factors = F)
+head(moblow.df)
+
+```
+
+```{r}
+install.packages("gdata")
+require(gdata)
+
+scenarios.df = read.xls (("scenarios.xls"), sheet = 1, header = TRUE)
+head(scenarios.df)
+
+```
+
+
+
+
+```
+
+sum <- 0
+
+for(i in  1:50){
+
+  sum <- sum + i
+
+}
+
+
+
