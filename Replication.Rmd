@@ -1,5 +1,5 @@
 ---
-title: "Replication"
+title: "Replication of Demographic Imperative Project"
 author: "Grace Tien"
 date: "March 6, 2015"
 output: html_document
