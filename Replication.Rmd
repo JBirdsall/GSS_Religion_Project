@@ -6,12 +6,15 @@ output: html_document
 ---
 
 ```{r}
-# We are working with the GSS cumulative data. We downloaded the Stata file from:    Because we are using a Stata file, we have to install the foreign package in order to read it. 
+# Set up libraries. We are working with the GSS cumulative data. We downloaded the Stata file from the NORC website. Because we are using a Stata file, we have to install the foreign package in order to read it. 
 
-library(foreign)
 library(dplyr)
 library(ggplot2)
 library(broom)
+
+# Because our GSS data is in a STATA file that we downloaded from the NORC website, we need to use 
+library(foreign)
+
 GSS.df <- read.dta("GSS7212_R6.DTA", convert.factors = FALSE, convert.underscore=TRUE)
 head(GSS.df)
 
