@@ -1,13 +1,12 @@
 ---
-title: "Replication2"
+title: "Replication"
 author: "Grace Tien"
 date: "March 6, 2015"
 output: html_document
 ---
 
 ```{r}
-# We are working w
-ith the GSS cumulative data. We downloaded the Stata file from:    Because we are using a Stata file, we have to install the foreign package in order to read it. 
+# We are working with the GSS cumulative data. We downloaded the Stata file from:    Because we are using a Stata file, we have to install the foreign package in order to read it. 
 
 library(foreign)
 library(dplyr)
